@@ -17,4 +17,3 @@ app.init = () => {
 
 // Start the application
 app.init();
-
