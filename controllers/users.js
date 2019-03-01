@@ -139,10 +139,10 @@ users.validate = async (user_payload, callback) => {
  * 
  * **This best be a functions as well since in the future we might want to change the id creation rules**
  * @param   {string} email 
- * @returns {string} user id (Base64 encoded)
+ * @returns {string} user id (md5 string)
  */
 users.create_user_id = (email) => {
-    return Buffer.from(email).toString('base64');
+    return crypto.createHash('md5').update(email).digest('hex');
 }
 
 /**
@@ -157,13 +157,36 @@ users.hash_password = (password) => {
 
 users.get = (payload, callback) => {
 
-    callback(
-        200, 
-        false,
-        {
-            msg: 'get'
-        }
-    );
+    /**
+     * GET /users/<email> 
+     */
+    let user_email = payload.id;
+
+    if ( user_email) {
+
+        file_model.read('users', users.create_user_id(user_email), (err, user_data) => {
+
+            if ( ! err && user_data) {
+
+                // Remove the password, ES6 style..
+                ({password, ...user_data} = user_data);
+                callback(200, false,  {
+                    message: `User's data was fetched successfully`,
+                    data: user_data
+                });
+            } else {
+                callback(404, true,  {
+                    message: `User was not found`
+                    
+                });
+            }
+        });
+    } else {
+        callback(412, true,  {
+            message: 'Need to specify the email in the URI'
+            
+        }) ;
+    }
 }
 
 users.get_collection = (payload, callback) => {
@@ -218,12 +241,12 @@ users.post_collection = (request, callback) => {
                     if ( ! err) {
                         callback( 200, false, { 
                             message: 'User was created successfully',
-                            payload: user_payload
+                            data: user_payload
                         });
                     } else {
                         callback( 500, true, { 
                             message: 'User was created successfully',
-                            payload: create_payload
+                            data: create_payload
                         });
                     }
                 });

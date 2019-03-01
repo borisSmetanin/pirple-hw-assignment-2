@@ -14,6 +14,8 @@
  * 
  * 3. token service 
  * - Create new token -  POST /token
+ * ** Need to provide email + password in the request (validation) 
+ * ** id will be the users id
  * ** fields - email, id, expires (now + 1 hour)
  * ** before creating user must provide email + password to check user exists
  * ** token id must be random unique string - unique for each token !!
