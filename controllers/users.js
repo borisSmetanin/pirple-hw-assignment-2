@@ -3,14 +3,15 @@
  */
 let users = {};
 
+module.exports = users;
+
 /**
  * Load dependencies
  */
 
 let 
     file_model = require('../lib/file_model'),
-    helpers    = require('../lib/helpers'),
-    crypto     = require('crypto');
+    helpers    = require('../lib/helpers');
 
 // This object contains all possible user fields and the their validation rules
 const user_fields_validation_rules = {
@@ -28,7 +29,7 @@ const user_fields_validation_rules = {
                    if (email.trim().toLowerCase().replace(/\s+/g, '') === email) {
                        
                         // File name is lower case email - saved as base64
-                       file_model.read('users', users.create_user_id(email), (err) => {
+                       file_model.read('users', helpers.create_user_id(email), (err) => {
                            // When creating new user we are expecting an error
                            if (err) {
                                resolve(false);
@@ -51,26 +52,26 @@ const user_fields_validation_rules = {
 
     },
     name: (name) => {
-        return users.string_field_validation(name, 'Name', 50);
+        return helpers.string_field_validation(name, 'Name', 50);
     },
     city: (city) => {
 
-        return users.string_field_validation(city, 'City', 100);
+        return helpers.string_field_validation(city, 'City', 100);
     },
 
     street_name: (street_name) => {
 
-        return users.string_field_validation(street_name, 'Street Name', 100);
+        return helpers.string_field_validation(street_name, 'Street Name', 100);
     },
 
     street_number: (street_number) => {
 
-        return users.string_field_validation(street_number, 'Street Number', 100);
+        return helpers.string_field_validation(street_number, 'Street Number', 100);
     },
 
     password: (password) => {
 
-        let string_validation_error = users.string_field_validation(password, 'Password', 50);
+        let string_validation_error = helpers.string_field_validation(password, 'Password', 50);
 
         if (string_validation_error) {
             return string_validation_error;
@@ -83,31 +84,6 @@ const user_fields_validation_rules = {
         return false;
     }
 }
-
-/**
- * Validation helper for string field
- * 
- * @param {string} string_field_value 
- * @param {string} string_field_name 
- * @param {integer} max_chars_allowed 
- * 
- * @returns {string | boolean} - returns the string validation error or false if no error was found
- */
-users.string_field_validation = (string_field_value, string_field_name, max_chars_allowed) => {
-    if ( ! string_field_value) {
-        return `${string_field_name} must not be empty`;
-    }
-
-    if (typeof string_field_value !== 'string') {
-        return `${string_field_name} must be string, "${typeof string_field_value}" was given.`;
-    }
-    
-    if (string_field_value.length > max_chars_allowed) {
-        return `${string_field_name} is too long. This field is restricted to ${max_chars_allowed} characters.`;
-    }
-
-    return false;
-} 
 
 /**
  * Special Async function that loops on the given user payload, validate each field and returns a callback on the very first error it finds
@@ -134,51 +110,39 @@ users.validate = async (user_payload, callback) => {
     callback(errors_found);
 }
 
-/**
- * Create the user id
- * 
- * **This best be a functions as well since in the future we might want to change the id creation rules**
- * @param   {string} email 
- * @returns {string} user id (md5 string)
- */
-users.create_user_id = (email) => {
-    return crypto.createHash('md5').update(email).digest('hex');
-}
-
-/**
- * @param {string} password
- * 
- * @returns {string} hashed password string 
- */
-users.hash_password = (password) => {
-
-    return crypto.createHash('sha256').update(password).digest('hex');
-}
-
-users.get = (payload, callback) => {
+users.get = (request, callback) => {
 
     /**
      * GET /users/<email> 
      */
-    let user_email = payload.id;
+    let user_email = request.id;
 
     if ( user_email) {
+        helpers.verify_token(request.token, user_email, (err) => {
 
-        file_model.read('users', users.create_user_id(user_email), (err, user_data) => {
+            if (! err) {
 
-            if ( ! err && user_data) {
-
-                // Remove the password, ES6 style..
-                ({password, ...user_data} = user_data);
-                callback(200, false,  {
-                    message: `User's data was fetched successfully`,
-                    data: user_data
+                file_model.read('users', helpers.create_user_id(user_email), (err, user_data) => {
+        
+                    if ( ! err && user_data) {
+        
+                        // Remove the password, ES6 style..
+                        ({password, ...user_data} = user_data);
+                        callback(200, false,  {
+                            message: `User's data was fetched successfully`,
+                            data: user_data
+                        });
+                    } else {
+                        callback(404, true,  {
+                            message: `User was not found`
+                            
+                        });
+                    }
                 });
             } else {
-                callback(404, true,  {
-                    message: `User was not found`
-                    
-                });
+                callback(412, true,  {
+                    message: `Invalid or expired token was provided`
+                }); 
             }
         });
     } else {
@@ -225,8 +189,8 @@ users.post_collection = (request, callback) => {
             if ( ! err) {
                 let 
                     purified_email  = user_payload.email.trim().toLowerCase().replace(/\s+/g, ''),
-                    user_id         = users.create_user_id(purified_email),
-                    hashed_password = users.hash_password(user_payload.password);
+                    user_id         = helpers.create_user_id(purified_email),
+                    hashed_password = helpers.hash_password(user_payload.password);
 
                 // Set purified email (just in case since we already have validations check on this)
                 user_payload.email = purified_email;
@@ -239,14 +203,15 @@ users.post_collection = (request, callback) => {
                 file_model.create('users', user_id, user_payload, (err, create_payload) => {
 
                     if ( ! err) {
+                        // Remove the password, ES6 style..
+                        ({password, ...user_payload} = user_payload);
                         callback( 200, false, { 
                             message: 'User was created successfully',
                             data: user_payload
                         });
                     } else {
                         callback( 500, true, { 
-                            message: 'User was created successfully',
-                            data: create_payload
+                            message: 'Could not create the user',
                         });
                     }
                 });
@@ -291,5 +256,3 @@ users.post_test = (payload, callback) => {
         { msg: 'post_test' }
     );;
 }
-
-module.exports = users;
