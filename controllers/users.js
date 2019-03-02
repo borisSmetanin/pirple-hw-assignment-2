@@ -3,6 +3,7 @@
  */
 let users = {};
 
+// Export the controller at file start to avoid circular dependencies
 module.exports = users;
 
 /**

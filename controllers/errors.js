@@ -3,6 +3,7 @@
  */
 let errors = {};
 
+// Export the controller at file start to avoid circular dependencies
 module.exports = errors;
 
 errors.not_found = (payload, callback) => {

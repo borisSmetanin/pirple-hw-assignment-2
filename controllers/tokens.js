@@ -15,6 +15,7 @@ let
     helpers    = require('../lib/helpers'),
     crypto     = require('crypto');
 
+const hour_in_milliseconds = 3600000;
 
 //=== Helpers ==========================================================================/
 
@@ -57,7 +58,7 @@ tokens.create_toke_id = (token_expired, user_id, user_password) => {
                     // Prepare the insert payload
                     let 
                         // Each token is expired after 1 hour
-                        token_expired = Date.now() + (1000 * 60 * 60),
+                        token_expired = Date.now() + hour_in_milliseconds,
                         token_id = tokens.create_toke_id(token_expired, user_id, user_data.password),
                         token_insert_payload = {
                             id: token_id,
@@ -96,5 +97,96 @@ tokens.create_toke_id = (token_expired, user_id, user_password) => {
         callback(412, true, {
             message: 'Token - Invalid password or emails were given. Token Expects to have a valid string email and password'
         });
+    }
+ }
+
+ /**
+  * PUT /tokens/<token_id>
+  * 
+  * required
+  * @email {string} - must provide email to authenticate token indeed belongs to this user
+  */
+ tokens.put = (request, callback) => {
+
+    let token_id = request.id;
+
+    // M,kae sure email was provided
+    if (request.payload.user_email) {
+
+        // Validate token exist, belongs to thew user and not yet expired
+        helpers.verify_token(token_id, request.payload.user_email, (err, token_data) => {
+
+            if ( ! err && token_data) {
+                // Update the token
+                token_data.expired = Date.now() + hour_in_milliseconds;
+                file_model.update('tokens', token_id, token_data, (err) => {
+                    if ( ! err) {
+                        callback(200, false, {
+                            message: 'Token was extended successfully'
+                        });
+                    } else {
+                        callback(500, true, {
+                            message: 'Could not update the token'
+                        }); 
+                    }
+                });
+            } else {
+                callback(403, true, {
+                    message: 'Token or user email are invalid. Make sure your token is not already expired'
+                });
+            }
+        });
+    } else {
+        callback(403, true, {
+            message: 'Token or user email are invalid'
+        }); 
+    }
+ }
+
+ /**
+  * DELETE /tokens/<token_id>
+  */
+ tokens.delete = (request, callback) => {
+
+    let token_id = request.id;
+
+    if (request.payload.user_email) {
+        
+        // Get the token
+        file_model.read('tokens', token_id, (err, token_data) => {
+    
+            if ( ! err && token_data) {
+    
+                // Check if provided user's email is the same as in the token's data
+                if (token_data.user_id === helpers.create_user_id(request.payload.user_email)) {
+
+                    file_model.delete('tokens', token_id, (err) => {
+
+                        if ( ! err) {
+
+                            callback(200, false, {
+                                message: 'Token was deleted successfully'
+                            })
+                        } else {
+                            callback(500, true, {
+                                message: 'Could not delete the token'
+                            });
+                        }
+                    });
+                } else {
+                    callback(403, true, {
+                        message: 'Token or user email is invalid'
+                    });
+                }
+            } else {
+                callback(404, true, {
+                    message: 'Token not found'
+                });
+            }
+        });
+    } else {
+        callback(403, true, {
+            message: 'Token or user email is invalid'
+        }); 
     }
  }
