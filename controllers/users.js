@@ -111,13 +111,12 @@ users.validate = async (user_payload, callback) => {
     callback(errors_found);
 }
 
+/**
+ * GET /users/<email> 
+ */
 users.get = (request, callback) => {
 
-    /**
-     * GET /users/<email> 
-     */
     let user_email = request.id;
-
     if ( user_email) {
         helpers.verify_token(request.token, user_email, (err) => {
 
@@ -152,17 +151,6 @@ users.get = (request, callback) => {
             
         }) ;
     }
-}
-
-users.get_collection = (payload, callback) => {
-
-    callback(
-        200, 
-        false,
-        {
-            msg: 'get_collection'
-        } 
-    );
 }
 
 /**
@@ -231,29 +219,90 @@ users.post_collection = (request, callback) => {
     }
 }
 
-users.put = (payload, callback) => {
+/**
+ * PUT /users/<user_id>
+ * 
+ * Updates a single user
+ */
+users.put = (request, callback) => {
 
-    callback(
-        200, 
-        false,
-        { msg: 'put' }
-    );
-}
+    let user_email = request.id;
+    helpers.verify_token(request.token, user_email, (err, token_data) => {
 
-users.delete = (payload, callback) => {
+        if ( ! err) {
+            // check that user has sent any 
+            let 
+                allowed_fields           = Object.keys(user_fields_validation_rules),
+                fields_blocked_from_edit = [ 'password', 'email' ];
 
-    callback(
-        200, 
-        false,
-        { msg: 'delete' }
-    );
-}
+            // Remove email and password from possible update options
+            // Email can not be updated since all is dependent on it (all orders and tokens are built on this email)
+            // Password can not be updated since all tokens relate to this password
+            // @TODO in the future - need to add PUT /users/<email>/change_email and PUT /users/<email>/change_password but this is out of the scope of this assignment
+            allowed_fields = allowed_fields.filter(allowed_field => ! fields_blocked_from_edit.includes(allowed_field));
+    
+            let update_payload = helpers.extract(request.payload, allowed_fields);
+            
+            if (Object.keys(update_payload).length > 0 ) {
 
-users.post_test = (payload, callback) => {
+                users.validate(update_payload, (err) => {
 
-    callback(
-        200, 
-        false,
-        { msg: 'post_test' }
-    );;
+                    if ( ! err) {
+
+                        // Get the user's data
+                        file_model.read('users', token_data.user_id, (err, user_data) => {
+                            if ( ! err) {
+
+                                // Assigns the update to the existing user data 
+                                // In this way fields that were not included in the update will not be effected
+                                // in addition this way i can preserve the email and password
+                                let updated_user = Object.assign(user_data, update_payload);
+
+                                // Update the user
+                                file_model.update('users', token_data.user_id, updated_user, (err) => {
+
+                                    // Remove the user's password before passing the data back to the user
+                                    ({password, ...updated_user} = updated_user);
+                                    if ( ! err) {
+                                        callback(200, true, {
+                                            message: `user was successfully updated`,
+                                            data: {
+                                                updated_user: updated_user
+                                            }
+                                        });
+
+                                    } else {
+                                        callback(500, true, {
+                                            message: `Could not update the user`
+                                        });
+                                    }
+                                });
+
+                            } else {
+                                callback(500, true, {
+                                    message: `Could not get the use's data`
+                                });
+                            }
+                        });
+
+                    } else {
+
+                        callback(412, true, {
+                            message: `Update users has failed due to the following error: ${err}`
+                        });
+                    }
+                });
+
+            } else {
+                callback(412, true, {
+                    message: `Invalid fields were provided for this update request, please use the following fields only: ${allowed_fields.join(', ')}`
+                });
+            }
+            
+        } else {
+            callback(403, true, {
+                message: 'Invalid token or email was provided'
+            });
+        }
+    });
 }

@@ -42,14 +42,12 @@
  * - update users PUT /user/<id>
  * ** update all but the email
  * 
- * - delete the user - DELETE /user/<id>
- * **  this will physically delete a user
  * - 
  * 
- * 7. get the possible menu: 
+ * 6. get the possible menu: 
  * - GET /menu - array of possible menu items: name, id, price, description
  * 
- * 8. orders service
+ * 7. orders service
  * - create new order - POST /order 
  * ** fields: 
  * *** timestamp - will be the key
@@ -70,6 +68,14 @@
  * 
  * - Show specific order - GET /order/<id>
  * - Show all orders     - GET /order
+ * 
+ * 8.  * - delete the user - DELETE /user/<id>
+ * **  this will physically delete a user
+ * ** need to make sure users has no "in progress order"
+ * ** need to deleted all users tokens - on delete - loop all tokens and delete the ones that have no user
+ * ** need to delete all users orders - on delete  - delete user order as well - check if
+ * 
+ * 
  *  
  */
 
