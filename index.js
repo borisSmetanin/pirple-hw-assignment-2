@@ -4,7 +4,7 @@
  * - create a file
  * - update a file
  * 
- * 2. users service 
+ * 2. users service (/)
  * * create new user - POST /user 
  * ** fields - email (will be the key), name, city, street name, number, password. id will be md5 of the email
  * ** need to make sure user does not exists before creating new one (try to load the given user's email)
@@ -12,7 +12,7 @@
  * ** when user is created - the user orders JSON file is created as well as an empty JSON file
  * 
  * 
- * 3. token service 
+ * 3. token service (/)
  * - Create new token -  POST /token
  * ** Need to provide email + password in the request (validation) 
  * ** id will be the users id
