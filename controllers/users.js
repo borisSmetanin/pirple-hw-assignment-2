@@ -306,3 +306,42 @@ users.put = (request, callback) => {
         }
     });
 }
+
+
+/**
+ * DELETE /users/<user_email>
+ */
+users.delete = (request, callback) => {
+    let user_email = request.id;
+    if ( user_email) {
+        helpers.verify_token(request.token, user_email, (err, token_data) => {
+
+            if (! err) {
+
+                file_model.delete('users', token_data.user_id, (err, id) => {
+
+                    if ( ! err) {
+
+                        callback(200, false,  {
+                            message: `User was successfully deleted from the system`
+                        });
+                    } else {
+
+                        callback(500, true,  {
+                            message: `Internal error - could not delete a user - pleas try again later`
+                        });
+                    }
+                });
+            } else {
+                callback(412, true,  {
+                    message: `Invalid or expired token was provided`
+                }); 
+            }
+        });
+    } else {
+        callback(412, true,  {
+            message: 'Need to specify the email in the URI'
+            
+        }) ;
+    }
+}

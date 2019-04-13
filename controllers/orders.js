@@ -166,6 +166,38 @@
     });
  }
 
+ /**
+  * GET /orders
+  */
+ orders.get_collection = (request, callback) => {
+
+    helpers.verify_token(request.token, request.query_object.email, (err, token_data) => {
+        if ( ! err) {
+
+            file_model.read_collection('orders', token_data.user_id, (err, orders) => {
+
+                if ( ! err) {
+
+                    callback(200, false,  {
+                        message: `Orders were retrieved successfully`,
+                        orders: orders
+                    });
+                } else { 
+                    callback(500, true,  {
+                        message: `Internal err, pleas try again later`
+                    });
+                }                
+            });
+
+        } else {
+            callback(403, true,  {
+                message: `Invalid or expired token was provided`
+            });
+        }
+    });
+
+ }
+
  orders.validate_order = (requested_order, callback) => {
 
     if (requested_order) {
