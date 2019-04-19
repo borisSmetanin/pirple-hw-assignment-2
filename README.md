@@ -9,11 +9,18 @@ This API is using [Stripe](https://stripe.com/) as the payment service and [Mail
 ## Installation (on Linux based machines)
 1. Install Node.js 
 2. Fork this repository to your local machine
-3. In the command line, run the following command from the root directory of this app:
+3. you will need to create local directory called ```data``` which will contain the App's data - This app has no DB and it is writing directly to the file system of your machine so make sure you have read and write permission to your directory
+4. In ```data``` directory creat the following sub-directories: ```orders```, ```tokens``` and ```users```
+5. create another directory called ```settings``` in the root of the app.
+6. take the provided  ```config-example.js``` file (already located in the root of the app) and place it inside the ```settings``` directory you created earlier, change the file name to be ```config.js```.
+7. in the ```config.js``` file you will need to configure your credentials for ```mailgun``` and ```stripe``` API's. replace whatever is in ```<PASSWORD>``` with your real credentials
+8. In the command line, run the following command from the root directory of this app:
+
 ```bash
 node index.js
 ```
-4. you should be able to see the following:
+9. you should be able to see the following:
+
 ```bash
 http is on
 https is on
